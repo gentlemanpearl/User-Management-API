@@ -1,15 +1,15 @@
 # User Management API
 
-A simple REST API for managing users built with Node.js and Express.
+A REST API for managing users and products built with Node.js, Express, and SQLite.
 
 ## Features
 
-- CRUD operations for users (Create, Read, Update, Delete)
-- In-memory storage
-- Input validation
-- Search users by name
-- Filter adult users (age >= 18)
-- Get all user emails
+- **User Management**: CRUD operations for users with SQLite database
+- **Product Management**: Full CRUD operations for products
+- **User Filtering**: Search by name, filter adults, filter by minimum age
+- **Data Validation**: Comprehensive input validation
+- **Active Users**: Query only active users by default
+- **Email Extraction**: Get all user emails
 
 ## Installation
 
@@ -33,45 +33,95 @@ npm run dev
 
 The server will run on `http://localhost:3000`
 
+## Database
+
+The API uses SQLite database (`database.db`) which is created automatically on first run.
+
 ## API Endpoints
 
 ### Users
 
-- `GET /users` - Get all users
+- `GET /users` - Get all active users
 - `GET /users/:id` - Get user by ID
 - `POST /users` - Create a new user
 - `PUT /users/:id` - Update a user
 - `DELETE /users/:id` - Delete a user
 
-### Additional Endpoints
+### User Filtering
 
-- `GET /users/search?name=<name>` - Search users by name
-- `GET /users/adults` - Get users with age >= 18
-- `GET /users/emails` - Get all user emails
+- `GET /users/search?name=<name>` - Search active users by name
+- `GET /users/adults` - Get active users with age >= 18
+- `GET /users/age/:min` - Get active users older than specified age
+- `GET /users/emails` - Get all emails from active users
+
+### Products
+
+- `GET /products` - Get all products
+- `GET /products/:id` - Get product by ID
+- `POST /products` - Create a new product
+- `PUT /products/:id` - Update a product
+- `DELETE /products/:id` - Delete a product
 
 ### User Schema
 
 ```json
 {
-  "id": "uuid",
+  "id": "integer (auto-increment)",
   "name": "string",
-  "email": "string",
-  "age": "number (optional)"
+  "email": "string (unique)",
+  "age": "integer (optional)",
+  "isActive": "boolean (default: true)"
 }
 ```
 
-## Testing with Postman
+### Product Schema
 
-1. Start the server
-2. Use Postman to test the endpoints
-3. Example requests:
-   - POST /users with body: `{"name": "John Doe", "email": "john@example.com", "age": 25}`
-   - GET /users to see all users
-   - PUT /users/:id to update
-   - DELETE /users/:id to delete
+```json
+{
+  "id": "integer (auto-increment)",
+  "name": "string",
+  "price": "number",
+  "category": "string"
+}
+```
 
 ## Validation
 
+### Users
 - Name: Required, non-empty string
-- Email: Required, must contain '@'
-- Age: Optional, must be a non-negative number
+- Email: Required, must contain '@', unique
+- Age: Optional, must be a non-negative integer
+- isActive: Optional, boolean (defaults to true)
+
+### Products
+- Name: Required, non-empty string
+- Price: Required, non-negative number
+- Category: Required, non-empty string
+
+## Testing with Postman
+
+### Create Users
+```bash
+POST /users
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "age": 25,
+  "isActive": true
+}
+```
+
+### Create Products
+```bash
+POST /products
+{
+  "name": "Laptop",
+  "price": 999.99,
+  "category": "Electronics"
+}
+```
+
+### Filter Users
+- `GET /users/adults` - Users 18+
+- `GET /users/age/30` - Users older than 30
+- `GET /users/search?name=John` - Search by name
