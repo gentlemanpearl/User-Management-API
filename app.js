@@ -102,19 +102,6 @@ app.get('/users', async (req, res) => {
   }
 });
 
-// GET /users/:id - Get user by ID
-app.get('/users/:id', async (req, res) => {
-  try {
-    const user = await dbGet('SELECT * FROM users WHERE id = ?', [req.params.id]);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
 // POST /users - Add user
 app.post('/users', async (req, res) => {
   const error = validateUser(req.body);
@@ -226,6 +213,19 @@ app.get('/users/emails', async (req, res) => {
   try {
     const emails = await dbAll('SELECT email FROM users WHERE isActive = 1');
     res.json(emails.map(row => row.email));
+  } catch (error) {
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// GET /users/:id - Get user by ID (must be last to avoid conflicts)
+app.get('/users/:id', async (req, res) => {
+  try {
+    const user = await dbGet('SELECT * FROM users WHERE id = ?', [req.params.id]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(user);
   } catch (error) {
     res.status(500).json({ error: 'Database error' });
   }
