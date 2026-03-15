@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Management API</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f7fafc;
+      color: #1a202c;
+    }
+    header {
+      padding: 2rem;
+      background: #2d3748;
+      color: #f7fafc;
+    }
+    main {
+      padding: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 2.25rem;
+    }
+    p {
+      margin: 0 0 1.5rem 0;
+      color: #718096;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin: 0.75rem 0;
+      padding: 0.8rem 1rem;
+      border-radius: 0.5rem;
+      background: #fff;
+      box-shadow: 0 0 0 1px rgba(14, 30, 37, 0.08);
+    }
+    code {
+      display: inline-block;
+      background: rgba(160, 174, 192, 0.25);
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.4rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    footer {
+      padding: 1rem 2rem;
+      text-align: center;
+      color: #a0aec0;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>User Management API</h1>
+    <p>A simple REST API with users and products. Use the endpoints below to interact with the service.</p>
+  </header>
+  <main>
+    <section>
+      <h2>Users</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Create user</h3>
+          <form id="userForm">
+            <label>
+              Name
+              <input name="name" required />
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" required />
+            </label>
+            <label>
+              Age
+              <input name="age" type="number" min="0" />
+            </label>
+            <label>
+              Active
+              <input name="isActive" type="checkbox" checked />
+            </label>
+            <button type="submit">Create user</button>
+          </form>
+        </div>
+        <div class="card">
+          <h3>Active users</h3>
+          <button id="refreshUsers">Refresh</button>
+          <div id="usersList" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Products</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Create product</h3>
+          <form id="productForm">
+            <label>
+              Name
+              <input name="name" required />
+            </label>
+            <label>
+              Price
+              <input name="price" type="number" step="0.01" min="0" required />
+            </label>
+            <label>
+              Category
+              <input name="category" required />
+            </label>
+            <button type="submit">Create product</button>
+          </form>
+        </div>
+        <div class="card">
+          <h3>Products</h3>
+          <button id="refreshProducts">Refresh</button>
+          <div id="productsList" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Quick Testing</h2>
+      <p>Use the buttons below to quickly test endpoint responses.</p>
+      <div class="buttons">
+        <button id="testAdults">Fetch adults (age ≥ 18)</button>
+        <button id="testEmails">Fetch user emails</button>
+        <button id="testSearch">Search name "John"</button>
+      </div>
+      <pre id="testOutput"></pre>
+    </section>
+  </main>
+  <footer>
+    Built with Node.js + Express. Data is stored in <code>database.db</code>.
+  </footer>
+
+  <script>
+    const showMessage = (el, html) => {
+      el.innerHTML = html;
+    };
+
+    const buildList = (items, renderItem) => {
+      if (!items || items.length === 0) {
+        return '<p><em>No records yet.</em></p>';
+      }
+      return items.map(renderItem).join('');
+    };
+
+    const formatUser = (user) => {
+      return `
+        <div class="item">
+          <div>
+            <strong>${user.name}</strong> <span class="meta">(${user.email})</span>
+            <div class="meta">Age: ${user.age ?? 'N/A'} • Active: ${user.isActive ? 'Yes' : 'No'}</div>
+          </div>
+          <div class="actions">
+            <button data-id="${user.id}" class="delete-user">Delete</button>
+          </div>
+        </div>
+      `;
+    };
+
+    const formatProduct = (product) => {
+      return `
+        <div class="item">
+          <div>
+            <strong>${product.name}</strong> <span class="meta">(${product.category})</span>
+            <div class="meta">$${product.price.toFixed(2)}</div>
+          </div>
+          <div class="actions">
+            <button data-id="${product.id}" class="delete-product">Delete</button>
+          </div>
+        </div>
+      `;
+    };
+
+    const fetchUsers = async () => {
+      const res = await fetch('/users');
+      const users = await res.json();
+      showMessage(document.getElementById('usersList'), buildList(users, formatUser));
+
+      document.querySelectorAll('.delete-user').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          await fetch(`/users/${btn.dataset.id}`, { method: 'DELETE' });
+          fetchUsers();
+        });
+      });
+    };
+
+    const fetchProducts = async () => {
+      const res = await fetch('/products');
+      const products = await res.json();
+      showMessage(document.getElementById('productsList'), buildList(products, formatProduct));
+
+      document.querySelectorAll('.delete-product').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          await fetch(`/products/${btn.dataset.id}`, { method: 'DELETE' });
+          fetchProducts();
+        });
+      });
+    };
+
+    const init = () => {
+      fetchUsers();
+      fetchProducts();
+
+      document.getElementById('refreshUsers').addEventListener('click', fetchUsers);
+      document.getElementById('refreshProducts').addEventListener('click', fetchProducts);
+
+      document.getElementById('userForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(event.target);
+        const payload = {
+          name: data.get('name'),
+          email: data.get('email'),
+          age: data.get('age') ? Number(data.get('age')) : null,
+          isActive: data.get('isActive') === 'on'
+        };
+
+        await fetch('/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        event.target.reset();
+        fetchUsers();
+      });
+
+      document.getElementById('productForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(event.target);
+        const payload = {
+          name: data.get('name'),
+          price: Number(data.get('price')),
+          category: data.get('category')
+        };
+
+        await fetch('/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        event.target.reset();
+        fetchProducts();
+      });
+
+      const output = document.getElementById('testOutput');
+      document.getElementById('testAdults').addEventListener('click', async () => {
+        const res = await fetch('/users/adults');
+        const json = await res.json();
+        output.textContent = JSON.stringify(json, null, 2);
+      });
+
+      document.getElementById('testEmails').addEventListener('click', async () => {
+        const res = await fetch('/users/emails');
+        const json = await res.json();
+        output.textContent = JSON.stringify(json, null, 2);
+      });
+
+      document.getElementById('testSearch').addEventListener('click', async () => {
+        const res = await fetch('/users/search?name=John');
+        const json = await res.json();
+        output.textContent = JSON.stringify(json, null, 2);
+      });
+    };
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
